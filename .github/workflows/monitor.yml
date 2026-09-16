@@ -34,6 +34,17 @@ jobs:
           path: .yeshuv_cache.json
           key: rmi-yeshuv-${{ github.ref }}
 
+      # Derive the Pages URL from wherever the repo currently lives, so the
+      # links in notifications survive a rename or a transfer to another
+      # account. $GITHUB_REPOSITORY is "owner/name" on every event type;
+      # the owner is lowercased because github.io hostnames are lowercase.
+      - name: Resolve map URL
+        id: mapurl
+        run: |
+          owner=$(printf '%s' "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')
+          name=${GITHUB_REPOSITORY#*/}
+          echo "url=https://${owner}.github.io/${name}/" >> "$GITHUB_OUTPUT"
+
       - name: Run monitor
         id: monitor
         env:
@@ -41,6 +52,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           RMI_UCHLUSIYA: ${{ secrets.RMI_UCHLUSIYA }}
+          MAP_URL: ${{ steps.mapurl.outputs.url }}
         run: python main.py
 
       # Baseline is in repo (baseline.json) — commit updates so next run gets it.
