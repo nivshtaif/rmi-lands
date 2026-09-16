@@ -6,7 +6,14 @@ on:
     paths:
       - 'docs/**'
       - '.github/workflows/pages.yml'
-  workflow_dispatch:   # Manual trigger — also works from a feature branch
+  # The monitor commits the regenerated map using GITHUB_TOKEN, and GitHub does
+  # not raise push events for token pushes — so the push trigger above never
+  # fires for them. Deploy off the monitor's completion instead, otherwise the
+  # published map silently stops tracking the snapshot.
+  workflow_run:
+    workflows: ["RMI Tender Monitor"]
+    types: [completed]
+  workflow_dispatch:   # Manual trigger
 
 # Let a running deploy finish; queue at most one behind it.
 concurrency:
@@ -16,6 +23,11 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Don't publish off a monitor run that failed — it may not have written a
+    # map at all. Other triggers are unconditional.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
       pages: write
